@@ -1,0 +1,12 @@
+[Unit]
+Description=My nice ecommerce
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ APP_USER }}
+ExecStart=/usr/bin/java -jar {{ APP_DIR }}/application.jar --server.port={{ APP_PORT }}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

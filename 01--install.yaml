@@ -1,0 +1,152 @@
+---
+- hosts: app_nodes
+  become: yes
+  vars:
+    JRE_RPM_URL: https://corretto.aws/downloads/latest/amazon-corretto-11-x64-al2-jre.rpm
+    APP_ARTIFACT_URL: https://github.com/jkanclerz/pp5-voucher-store-12/releases/download/v0.1.1/application.jar
+    APP_DIR: /opt/ecommerce
+    APP_USER: ecommerce
+    APP_PORT: 5000
+  tasks:
+    - name: "Install jre"
+      yum:
+        name: "{{ JRE_RPM_URL }}"
+        state: present
+    - name: "Ensure app dir exists"
+      file:
+        path: "{{ APP_DIR }}"
+        state: directory
+    - name: "download app artifact"
+      get_url:
+        url: "{{APP_ARTIFACT_URL}}"
+        dest: "{{ APP_DIR ~ '/application.jar'}}"
+    - name: "create user for my app"
+      user:
+        name: "{{ APP_USER }}"
+        state: present
+    - name: "place service cfg"
+      template:
+        src: files/systemd/ecommerce.service
+        dest: /etc/systemd/system/ecommerce.service
+    - name: "start my app"
+      systemd:
+        name: ecommerce
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+- hosts: lb_nodes
+  become: yes
+  vars:
+    DOMAIN_NAME: vouchershop1.jkan.pl
+    DOMAIN_OWNER_EMAIL: jakub.kanclerz@gmail.com
+    APP_NODE_IPS: 
+      - '172.31.47.146:5000'
+    EPEL_RPM_URL: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    CERT_BOT_RPM: https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/c/certbot-1.10.1-1.el7.noarch.rpm
+  tasks:
+    - name: "install epel"
+      yum:
+        name: "{{ EPEL_RPM_URL }}"
+        state: present
+    - name: "install nginx"
+      yum:
+        name: nginx
+        state: present
+    - name: "install certbot dep"
+      yum:
+        name: "{{ CERT_BOT_RPM }}"
+        state: present
+    - name: "install certbot nginx-plugin"
+      yum:
+        name: "certbot-nginx"
+        state: present
+    - name: "put nginx cfg"
+      template:
+        src: files/nginx/ecommerce.conf
+        dest: /etc/nginx/conf.d/ecommerce.conf
+    - name: "start nginx"
+      systemd:
+        name: nginx
+        enabled: yes
+        state: restarted
+    - name: install cert
+      command: 
+        cmd: certbot -i nginx --nginx -d "{{ DOMAIN_NAME }}" -m "{{ DOMAIN_OWNER_EMAIL }}" --agree-tos --redirect
+
+- hosts: stats
+  become: yes
+  vars:
+    telegraf_rpm_url: https://dl.influxdata.com/telegraf/releases/telegraf-1.16.2-1.x86_64.rpm
+    influxdb_rpm_url: https://dl.influxdata.com/influxdb/releases/influxdb-1.8.3.x86_64.rpm
+    grafana_rpm_url: https://dl.grafana.com/oss/release/grafana-7.3.6-1.x86_64.rpm
+    metrics_database: metrics
+    grafana_url: http://127.0.0.1:3000
+    grafana_user: admin
+    grafana_password: secureAdminPw
+  tasks:
+    - name: "install telegraf dep"
+      yum:
+        name: "{{ telegraf_rpm_url }}"
+    - name: "install influx dep"
+      yum:
+        name: "{{ influxdb_rpm_url }}"
+    - name: "install grafana"
+      yum:
+        name: "{{ grafana_rpm_url }}"
+
+    - name: "put telegraf cfg into destination"
+      template:
+        src: files/telegraf/telegraf.conf
+        dest: /etc/telegraf/telegraf.conf
+
+    - name: "put grafana cfg into destination"
+      template:
+        src: files/grafana/grafana.ini
+        dest: /etc/grafana/grafana.ini
+    
+    - name: "restart services"
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        - influxdb
+        - telegraf
+        - grafana-server
+    - name: install python dep
+      yum:
+        name: python2-pip
+        state: present
+    - name: install influx db driver
+      pip:
+        name: influxdb
+        state: present
+    - name: "create metrics db"
+      influxdb_database:
+        database_name: "{{ metrics_database }}"
+    
+    - name: Create influxdb datasource
+      grafana_datasource:
+        name: "influxdb"
+        grafana_url: "{{ grafana_url }}"
+        grafana_user: "{{ grafana_user }}"
+        grafana_password: "{{ grafana_password }}"
+        ds_type: "influxdb"
+        ds_url: "http://127.0.0.1:8086"
+        database: "{{ metrics_database }}"
+        time_interval: ">10s"
+    
+    - name: copy dashboard to remotr
+      copy:
+        src: files/grafana/dashboard.json
+        dest: /tmp/dashboard.json
+      
+    - name: Create grafana dashboard
+      grafana_dashboard:
+        grafana_url: "{{ grafana_url }}"
+        grafana_user: "{{ grafana_user }}"
+        grafana_password: "{{ grafana_password }}"
+        state: present
+        commit_message: Updated by ansible
+        overwrite: yes
+        path: /tmp/dashboard.json
