@@ -37,6 +37,18 @@ systemd service {serviceName}
 journalctl -u -f {serviceName}
 ```
 
+# Helm
+
+You can install the store using a helm chart script
+
+```bash
+cd scripts
+bash deploy.sh
+```
+this script will install k3d cluster, dependencies, nginx, grafana and the application as a service  
+
+after install visit http://voucherstore.pl/ to see the application or http://grafana.voucherstore.pl for grafana  
+everything is directed by nginx ingress controller
 
 ## Diagram
 
