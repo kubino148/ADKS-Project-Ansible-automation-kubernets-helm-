@@ -1,0 +1,20 @@
+apiVersion: v2
+dependencies:
+- condition: grafana.enabled
+  name: grafana
+  repository: '@grafana'
+  version: 6.2.2
+keywords:
+- pp5
+- zaliczenie
+- panda5.5
+- superhelm
+- adsk
+- backend
+maintainers:
+- email: s210901
+  name: kubino148
+name: voucherstore
+description: PP5 Voucher Store
+type: application
+version: 0.1.1

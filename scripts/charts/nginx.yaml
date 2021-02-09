@@ -1,0 +1,4 @@
+controller:
+  ingressClass: nginx-local
+  config:
+    use-forwarded-headers: "true"

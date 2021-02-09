@@ -540,7 +540,7 @@
             ]
           },
           {
-            "alias": "jkan response ms",
+            "alias": "kubino148 response ms",
             "groupBy": [
               {
                 "params": [
@@ -579,7 +579,7 @@
               {
                 "key": "url",
                 "operator": "=",
-                "value": "jkan.pl"
+                "value": "kubino148.pl"
               }
             ]
           }

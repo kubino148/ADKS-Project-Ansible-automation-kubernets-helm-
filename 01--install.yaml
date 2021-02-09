@@ -3,7 +3,7 @@
   become: yes
   vars:
     JRE_RPM_URL: https://corretto.aws/downloads/latest/amazon-corretto-11-x64-al2-jre.rpm
-    APP_ARTIFACT_URL: https://github.com/jkanclerz/pp5-voucher-store-12/releases/download/v0.1.1/application.jar
+    APP_ARTIFACT_URL: https://github.com/kubino148/pp5-voucherstore-11/releases/download/v0.1.3/application.jar
     APP_DIR: /opt/ecommerce
     APP_USER: ecommerce
     APP_PORT: 5000
@@ -38,7 +38,7 @@
 - hosts: lb_nodes
   become: yes
   vars:
-    DOMAIN_NAME: vouchershop1.jkan.pl
+    DOMAIN_NAME: vouchershop1.kubino148.pl
     DOMAIN_OWNER_EMAIL: jakub.kanclerz@gmail.com
     APP_NODE_IPS: 
       - '172.31.47.146:5000'
